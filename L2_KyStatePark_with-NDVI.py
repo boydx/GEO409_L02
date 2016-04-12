@@ -193,7 +193,7 @@ arcpy.CheckInExtension("3D")
 ################# Export vector layers to published shapefiles ################# 
 
 #Set workspace
-arcpy.env.workspace = fcworkspace 
+arcpy.env.workspace = gdbworkspace 
 
 #Create list object of all Feature Classes in our workspace
 fclist = arcpy.ListFeatureClasses() 
