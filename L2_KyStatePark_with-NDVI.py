@@ -14,22 +14,25 @@ import arcpy.sa
 arcpy.env.overwriteOutput = True
 
 #Set directory for input feature class layers
-fcworkspace = 'T:/Arcdata/BoydsGIS/Geo409/L02/downloaded-data/fc/'
+fcworkspace = 'T:/users/BoydsGIS/GEO409/L02/downloaded-data/fc/'
 
 #Set directory for input raster layers
-rasterworkspace = 'T:/Arcdata/BoydsGIS/Geo409/L02/downloaded-data/rasters/'
+rasterworkspace = 'T:/users/BoydsGIS/GEO409/L02/downloaded-data/rasters/'
 
 #Set directory for output raster layers
-published_data = "T:/Arcdata/BoydsGIS/Geo409/L02/published/"
+published_data = "T:/users/BoydsGIS/GEO409/L02/published/"
 
 #Set output GDB that will contain our built vector layers
-gdbworkspace = 'T:/Arcdata/BoydsGIS/Geo409/L02/workspace.gdb/'
+gdbworkspace = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/'
+
+#Set Ky Trails Layer for attributes modification
+fc = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/KY_Trails'
 
 #Set our extent, which was given to us by the client. Also contains our final CRS
-extent = "T:/Arcdata/BoydsGIS/Geo409/L02/extent/AreaOfInterest.shp"
+extent = "T:/users/BoydsGIS/GEO409/L02/extent/AreaOfInterest.shp"
 
 #Create our SpatialReference object that we will use to define other output CRS
-sr = arcpy.SpatialReference("T:/Arcdata/BoydsGIS/Geo409/L02/extent/AreaOfInterest.prj")
+sr = arcpy.SpatialReference(r'T:\users\BoydsGIS\GEO409\L02\extent\AreaOfInterest.prj')
 
 ################# Vector Layers Project and Clip ################# 
 
@@ -108,7 +111,7 @@ for raster in rlist:
 
 #Inspect attributes for Ky Trails and create label field to use for final map
 #Build list of fields and print them
-fc = r'T:\Arcdata\BoydsGIS\Geo409\L02\workspace.gdb\KY_Trails'
+
 fields = arcpy.ListFields(fc)
 for field in fields:
     print("{0} is a type of {1} with a length of {2}".format(field.name, field.type, field.length))
@@ -150,7 +153,7 @@ for raster in elev:
 	hillshade = published_data + "elevation_hillshade.tif"
 	r1 = arcpy.sa.Raster(raster)*3.281
 	r1.save(elevFeet)
-	arcpy.HillShade_3d(raster, hillshade, 270, 55)
+	arcpy.HillShade_3d(elevFeet, hillshade, 270, 55)
 
 ################# EXTRA: Create NDVI and canopy layer ################# 
 
