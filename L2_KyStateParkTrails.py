@@ -26,14 +26,11 @@ published_data = 'T:/users/BoydsGIS/GEO409/L02/published/'
 gdbworkspace = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/'
 
 #Set Ky Trails Layer for attributes modification
-<<<<<<< HEAD
+
 ky_trails = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/KY_Trails'
 
 #Set Ky park boundary layer to get park PUBLIC_NAM attribute
 ky_park = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/Kentucky_State_Park_Boundaries'
-=======
-fc_trails = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/KY_Trails'
->>>>>>> origin/master
 
 #Set our extent, which was given to us by the client. Also contains our final CRS
 extent = 'T:/users/BoydsGIS/GEO409/L02/extent/AreaOfInterest.shp'
@@ -195,37 +192,6 @@ for raster in rlist:
     else:
         print "Keeping {0}".format(desc.basename)
 
-<<<<<<< HEAD
-=======
-################# Modify trail attributes ################# 
-
-#Inspect attributes for Ky Trails and create label field to use for final map
-#Build list of fields and print them
-
-fields = arcpy.ListFields(fc_trails)
-for field in fields:
-    print("{0} is a type of {1} with a length of {2}".format(field.name, field.type, field.length))
-
-#Iterate through records and look at field values
-fields = ['TRAIL_NAME','GIS_MILE']
-cursor = arcpy.da.SearchCursor(fc_trails,fields)
-for row in cursor:
-	print "{0} is {1} miles long.".format(row[0], row[1])
-
-#Add a new field called 'Label' and calculate a string to use for our map label
-arcpy.AddField_management (fc_trails, "Label", "TEXT", "#", "#", 50)
-fields = ['TRAIL_NAME','GIS_MILE', 'Label']
-cursor = arcpy.da.UpdateCursor(fc_trails,fields)
-for row in cursor:
-	#print "{0}, {1} mi".format(row[0],round(row[1],2))
-	if row[1] > 0.2:
-		row[2] = row[0] + " Trail " + str(round(row[1],2)) +" mi"
-	else:
-		row[2] = ""
-	cursor.updateRow(row)
-	print row[2]
-del cursor, row
->>>>>>> origin/master
 
 ################# Create hillshade and elevation rasters for use in QGIS ################# 
 
@@ -247,6 +213,7 @@ for raster in elev:
 	r1 = arcpy.sa.Raster(raster)*3.281
 	r1.save(elevFeet)
 	arcpy.HillShade_3d(elevFeet, hillshade, 270, 55)
+
 
 ################# EXTRA: Create NDVI and canopy layer ################# 
 
