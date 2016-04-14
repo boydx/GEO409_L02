@@ -20,21 +20,26 @@ fcworkspace = 'T:/users/BoydsGIS/GEO409/L02/downloaded-data/fc/'
 rasterworkspace = 'T:/users/BoydsGIS/GEO409/L02/downloaded-data/rasters/'
 
 #Set directory for output raster layers
-published_data = "T:/users/BoydsGIS/GEO409/L02/published/"
+published_data = 'T:/users/BoydsGIS/GEO409/L02/published/'
 
 #Set output GDB that will contain our built vector layers
 gdbworkspace = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/'
 
 #Set Ky Trails Layer for attributes modification
-fc = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/KY_Trails'
+ky_trails = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/KY_Trails'
+
+#Set Ky park boundary layer to get park PUBLIC_NAM attribute
+ky_park = 'T:/users/BoydsGIS/GEO409/L02/workspace.gdb/Kentucky_State_Park_Boundaries'
 
 #Set our extent, which was given to us by the client. Also contains our final CRS
-extent = "T:/users/BoydsGIS/GEO409/L02/extent/AreaOfInterest.shp"
+extent = 'T:/users/BoydsGIS/GEO409/L02/extent/AreaOfInterest.shp'
 
 #Create our SpatialReference object that we will use to define other output CRS
-sr = arcpy.SpatialReference(r'T:\users\BoydsGIS\GEO409\L02\extent\AreaOfInterest.prj')
+sr = arcpy.SpatialReference('T:/users/BoydsGIS/GEO409/L02/extent/AreaOfInterest.prj')
 
 ################# Vector Layers Project and Clip ################# 
+
+print """############# Projecting and clipping vector layers ############# """
 
 #Set current workspace to feature class folder
 arcpy.env.workspace = fcworkspace 
@@ -59,7 +64,82 @@ for fc in fclist:
 	#Delete function
 	arcpy.Delete_management(tempfc)
 
+
+        
+################# What is the park name? ################# 
+
+print """############# Public Park Name ############# """
+
+#Get public name of park
+cursor = arcpy.da.SearchCursor(ky_park,['PUBLIC_NAM'])
+for row in cursor:
+    print "We're working in {0}".format(row[0])
+    park_name = row[0].replace(" ","_")
+
+
+
+################# Modify trail attributes ################# 
+
+#Inspect attributes for Ky Trails and create label field to use for final map
+#Build list of fields and print them
+
+print """############# Adding label field to park trails ############# """
+
+fields = arcpy.ListFields(ky_trails)
+for field in fields:
+    print("{0} is a type of {1} with a length of {2}".format(field.name, field.type, field.length))
+
+#Iterate through records and look at field values
+fields = ['TRAIL_NAME','GIS_MILE']
+cursor = arcpy.da.SearchCursor(ky_trails,fields)
+for row in cursor:
+	print "{0} is {1} miles long.".format(row[0], row[1])
+
+#Add a new field called 'Label' and calculate a string to use for our map label
+arcpy.AddField_management (ky_trails, "Label", "TEXT", "#", "#", 50)
+fields = ['TRAIL_NAME','GIS_MILE', 'Label']
+cursor = arcpy.da.UpdateCursor(ky_trails,fields)
+for row in cursor:
+	print "{0} Trail {1} mi".format(row[0],row[1])
+	if row[1] > 0.2:
+		row[2] = row[0] + " Trail " + str(round(row[1],2)) +" mi"
+	else:
+		row[2] = ""
+	cursor.updateRow(row)
+	print row[2]
+del cursor, row
+
+
+
+################# Export vector layers to published shapefiles ################# 
+
+print """############# Exporting to Shapefiles ############# """
+
+#Set workspace
+arcpy.env.workspace = gdbworkspace 
+
+#Create list object of all Feature Classes in our workspace
+fclist = arcpy.ListFeatureClasses() 
+
+#Iterate alphabetically through our list and declare each feature classes fc
+for fc in fclist:
+    #Create Describe object with properties: http://pro.arcgis.com/en/pro-app/arcpy/functions/describe.htm
+    desc = arcpy.Describe(fc)
+    if desc.basename=="Kentucky_State_Park_Boundaries":
+        print "Changing {0} name to {1}_bnd".format(desc.basename,park_name)
+        arcpy.FeatureClassToFeatureClass_conversion (fc, published_data, park_name + "_bnd.shp")
+    elif desc.basename=="KY_Trails":
+        print "Changing {0} name to {1}_trails".format(desc.basename,park_name)
+        arcpy.FeatureClassToFeatureClass_conversion (fc, published_data, park_name + "_trails.shp")
+    else:
+        print "Converting {0}".format(desc.basename)
+        arcpy.FeatureClassToFeatureClass_conversion (fc, published_data, desc.basename + ".shp")
+    
+
+
 ################# Raster Layers Project and Clip ################# 
+
+print """############# Projecting and clipping rasters ############# """
 
 #Set current workspace to raster folder
 arcpy.env.workspace = rasterworkspace
@@ -85,6 +165,7 @@ for raster in rlist:
 
 ################# Mosaic NAIP raster to published folder################# 
 
+print """############# Mosaic NAIP tiles use the name of the image ############# """
 #Create mosaiced raster from mulitple images
 arcpy.env.workspace = gdbworkspace
 mosaicraster = ""
@@ -97,46 +178,23 @@ for raster in rlist:
 		mosaicraster = mosaicraster + desc.basename[:12] + ";"
 print mosaicraster
 arcpy.MosaicToNewRaster_management (mosaicraster, gdbworkspace, "NAIP2014", "#", "#", "#", 4)
-arcpy.CopyRaster_management ("NAIP2014", published_data+"NAIP_2014.tif")
+arcpy.CopyRaster_management ("NAIP2014", published_data+ park_name + "_NAIP_2014.tif")
+
+print """############# Deleting NAIP ############# """
 
 rlist = arcpy.ListRasters() 
 for raster in rlist:
-	desc = arcpy.Describe(raster)
-	if desc.basename[0:2] == "m_":
-		arcpy.Delete_management(raster)
-	else:
-		print "all good yo!"
+    desc = arcpy.Describe(raster)
+    if desc.basename[0:2] == "m_":
+        print "Deleting {0}".format(desc.basename)
+        arcpy.Delete_management(raster)
+    else:
+        print "Keeping {0}".format(desc.basename)
 
-################# Modify trail attributes ################# 
-
-#Inspect attributes for Ky Trails and create label field to use for final map
-#Build list of fields and print them
-
-fields = arcpy.ListFields(fc)
-for field in fields:
-    print("{0} is a type of {1} with a length of {2}".format(field.name, field.type, field.length))
-
-#Iterate through records and look at field values
-fields = ['TRAIL_NAME','GIS_MILE']
-cursor = arcpy.da.SearchCursor(fc,fields)
-for row in cursor:
-	print "{0} is {1} miles long.".format(row[0], row[1])
-
-#Add a new field called 'Label' and calculate a string to use for our map label
-arcpy.AddField_management (fc, "Label", "TEXT", "#", "#", 50)
-fields = ['TRAIL_NAME','GIS_MILE', 'Label']
-cursor = arcpy.da.UpdateCursor(fc,fields)
-for row in cursor:
-	#print "{0}, {1} mi".format(row[0],round(row[1],2))
-	if row[1] > 0.2:
-		row[2] = row[0] + " Trail " + str(round(row[1],2)) +" mi"
-	else:
-		row[2] = ""
-	cursor.updateRow(row)
-	print row[2]
-del cursor, row
 
 ################# Create hillshade and elevation rasters for use in QGIS ################# 
+
+print """############# Creating TIFF rasters ############# """
 
 #Check out extensions
 arcpy.CheckOutExtension("Spatial")
@@ -149,13 +207,15 @@ elev = arcpy.ListRasters("img*")
 for raster in elev:
 	rasterObject = arcpy.Describe(raster)
 	name = rasterObject.basename 
-	elevFeet = published_data + "elevation_feet.tif"
-	hillshade = published_data + "elevation_hillshade.tif"
+	elevFeet = published_data + park_name  + "_elev_feet.tif"
+	hillshade = published_data + park_name + "_hillshade.tif"
 	r1 = arcpy.sa.Raster(raster)*3.281
 	r1.save(elevFeet)
 	arcpy.HillShade_3d(elevFeet, hillshade, 270, 55)
 
 ################# EXTRA: Create NDVI and canopy layer ################# 
+
+print """############# Creating NDVI and canopy rasters as TIFFs ############# """
 
 #Create NDVI (extra stuff)
 naip = arcpy.ListRasters("NAIP*")
@@ -171,7 +231,7 @@ for raster in naip:
 	compNIR = rasterObject.catalogPath + "/Band_4"
 	print "Extracting Near Infrared Band ato {0}".format(NIRBand)
 	arcpy.CompositeBands_management(compNIR,NIRBand)
-	ndvi = rasterObject.basename + "_ndvi.tif"
+	ndvi = park_name + "_ndvi.tif"
 	print "Creating NDVI as {0} ... to: ".format(ndvi)
 	rastermath=(arcpy.sa.Raster(NIRBand)-arcpy.sa.Raster(RedBand))/arcpy.sa.Float(arcpy.sa.Raster(NIRBand)+arcpy.sa.Raster(RedBand))
 	print published_data+ndvi
@@ -185,7 +245,7 @@ for raster in ndvi:
 	print raster
 	rasterObject = arcpy.Describe(raster)
 	rasterLayer = arcpy.sa.Raster(raster)
-	ndvi = published_data + "canopy.tif"
+	ndvi = published_data + park_name + "_canopy.tif"
 	print "Makin vegetation layer with NDVI value greater {0}".format(ndvi)
 	r2 = rasterLayer > 0.2
 	r2.save(ndvi)
@@ -193,18 +253,4 @@ for raster in ndvi:
 arcpy.CheckInExtension("Spatial")
 arcpy.CheckInExtension("3D")
 
-################# Export vector layers to published shapefiles ################# 
-
-#Set workspace
-arcpy.env.workspace = gdbworkspace 
-
-#Create list object of all Feature Classes in our workspace
-fclist = arcpy.ListFeatureClasses() 
-
-#Iterate alphabetically through our list and declare each feature classes fc
-for fc in fclist:
-    
-	#Create Describe object with properties: http://pro.arcgis.com/en/pro-app/arcpy/functions/describe.htm
-	desc = arcpy.Describe(fc)
-	arcpy.FeatureClassToFeatureClass_conversion (fc, published_data, desc.basename + ".shp")
 
