@@ -2,6 +2,7 @@
 make_canopy.py uses ArcPy, Python 2.7
 Boyd Shearer, April 2014, for University of Kentucky GEO 409, Advanced GIS
 
+This script creates an approximate NDVI and canopy rasters from a Landsat 8 scene. This script uses raw digital numbers and doesn't perform any radiometric correction.  
 Notes: Putting Landsat 8’s Bands to Work, https://www.mapbox.com/blog/putting-landsat-8-bands-to-work/
 
 """
